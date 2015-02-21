@@ -1,0 +1,89 @@
+---
+title       : Visualizing moving averages
+subtitle    : Making sense of a stream discharge time series
+author      : J. M. Branlund
+job         : 
+framework   : io2012 # {landslide, flowtime, io2012, html5slides, shower, dzslides, ...}
+highlighter : highlight.js  # {highlight.js, prettify, highlight}
+hitheme     : tomorrow      # 
+widgets     : []            # {mathjax, quiz, bootstrap}
+mode        : selfcontained # {standalone, draft}
+knit        : slidify::knit2slides
+---
+
+## Stream discharge
+
+```{r dischargeplot, echo=FALSE, fig.width=8, fig.height=4}
+streamFlow <- read.csv("05543500discharge", skip=28, header=FALSE, sep="\t")
+streamFlow <- subset(streamFlow, V5 == "A")
+streamFlow <- streamFlow[,1:4]
+colnames(streamFlow) <- c("agency", "site", "date", "discharge")
+streamFlow$date <- as.Date(streamFlow$date)
+xmin <- as.Date("1950-01-01")
+xmax <- as.Date("1990-01-01")
+streamFlow <- subset(streamFlow, date > xmin)
+streamFlow <- subset(streamFlow, date < xmax)
+plot(streamFlow$date, streamFlow$discharge, type="l", col=grey(.5), ylab="Discharge (cubic feet per sec)", xlab="Year", xaxt="n")
+axis.Date(1, at = seq(xmin, xmax, 365))
+```
+
+- the volume of water that flows through in a given time
+- shown above for USGS gage station 05543500 (Illinois River)
+- measured continually at many sites by the USGS (United States Geological Survey). The average daily discharges are available online at http://waterdata.usgs.gov/nwis.
+
+--- .class #id 
+
+## The problem
+
+Ideally, one could answer questions using these time series, like:  
+- "How did stream flow change due to levee construction?"
+- "Are seasonal precipitation patterns responsible for streamflow?"
+- "Has discharge changed in response to global warming?"
+
+
+<font color = blue><b>BUT... </b></font> Patterns in streamflow with time are hard to discern from the time-series plot.
+
+---
+
+## A solution - the moving average
+
+- Calculating a moving average is one way to tease out patterns in the data. 
+
+- For a given date, the moving average is the average of values from that date and <em>n</em> previous dates (more data are averaged when <em>n</em> is larger). In R, this is done with the <em>filter</em> function. 
+
+- Including different numbers of days may show different patterns, for example, changes in discharge due to seasonal precipitation patterns (a smaller <em>n</em> value) versus global climate change (larger <em>n</em>). 
+
+---
+
+## Importance of <em>n</em>
+
+Below, the top graph shows a moving average calculated with <font color="blue">60 days (~2 months) </font>of data, whereas the bottom graph uses <font color="blue">360 days (~1 year)</font> of data. (Discharge is in cubic feet per second.)
+
+```{r smallN, echo=FALSE, fig.width=8, fig.height=5}
+layout(matrix(c(1,1,2,2), 2, 2, byrow = TRUE))
+plot(streamFlow$date, streamFlow$discharge, type="l", col=grey(.5), ylab="Discharge", ylim = c(0, 4e4), xlab="", xaxt="n")
+axis.Date(1, at = seq(xmin, xmax, 365))
+Phil <- rep(1/60, 60)
+AvgDischarge <- filter(streamFlow$discharge, Phil, sides=1)
+lines(streamFlow$date, AvgDischarge, col="red", lwd=2)
+plot(streamFlow$date, streamFlow$discharge, type="l", col=grey(.5), ylab="Discharge", ylim = c(0, 3e4), xlab="Year", xaxt="n")
+axis.Date(1, at = seq(xmin, xmax, 365))
+Phil <- rep(1/360, 360)
+AvgDischarge <- filter(streamFlow$discharge, Phil, sides=1)
+lines(streamFlow$date, AvgDischarge, col="red", lwd=2)
+```
+
+---
+
+## An app to explore moving averages
+
+The app, <font color="blue"><em>Using moving averages to find patterns in stream discharge</em></font>, allows the user to:
+
+- change the value of <em>n</em> (number of days used in the moving average), and compare the resulting moving average with the data (which can be hidden for better viewing)
+- change the range of dates and maximum discharge graphed, to better see the plotted data
+- view lists of high discharge in the selected time range (in the Summary tab)
+
+Future iterations of the app will:
+- Allow users to select data from different stream gages
+- Show a table of the peaks visible in the moving average graph
+
